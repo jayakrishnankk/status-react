@@ -22,7 +22,6 @@
                         :topics        topics
                         :type          :message
                         :requires-ack? true)]
-    (log/info "QQQ send!" message')
     (debug :send-user-message message')
     (d/add-pending-message! web3 message')))
 

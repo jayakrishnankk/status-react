@@ -94,9 +94,6 @@
     ;; start listening to user's inbox
     (if config/offline-inbox-enabled?
       (do (log/info "offline inbox: flag enabled")
-          (log/info "QQQ identity:" identity)
-          (log/info "QQQ topic:" (f/get-topics identity))
-          (log/info "QQQ opts:" listener-options)
           (f/add-filter!
             web3
             {:key      identity
