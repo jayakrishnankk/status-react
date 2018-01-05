@@ -198,19 +198,19 @@
             (assoc :to chat-id :message-type :user-message))))
 
 (defn send-message [{{:keys [network-status] :as db} :db
-                     :keys [now get-stored-chat get-last-clock-value]}
+                     :keys                           [now get-stored-chat get-last-clock-value]}
                     {:keys [chat-id] :as params}]
-  (let [chat        (get-in db [:chats chat-id])
-        message     (prepare-message (get-last-clock-value chat-id) params chat)
-        params'     (assoc params :message message)
+  (let [chat    (get-in db [:chats chat-id])
+        message (prepare-message (get-last-clock-value chat-id) params chat)
+        params' (assoc params :message message)
 
-        cofx        {:db                       (chat-utils/add-message-to-db db chat-id chat-id message)
-                     :update-message-overhead! [chat-id network-status]
-                     :save-message             message}]
-    (-> (merge cofx (chat-model/upsert-chat (assoc cofx :get-stored-chat get-stored-chat :now now)
-                                            {:chat-id chat-id}))
-        (as-> cofx'
-          (merge cofx' (send cofx' params'))))))
+        fx      {:db                       (chat-utils/add-message-to-db db chat-id chat-id message)
+                 :update-message-overhead! [chat-id network-status]
+                 :save-message             message}]
+    (-> (merge fx (chat-model/upsert-chat (assoc fx :get-stored-chat get-stored-chat :now now)
+                                          {:chat-id chat-id}))
+        (as-> fx'
+          (merge fx' (send fx' params'))))))
 
 (defn- prepare-command
   [identity chat-id clock-value
@@ -267,7 +267,7 @@
         preview       (get-in db [:message-data :preview (:message-id command')])
         params'       (assoc params :command command')
 
-        cofx          {:db                       (-> (merge db (:db result))
+        fx            {:db                       (-> (merge db (:db result))
                                                      (chat-utils/add-message-to-db add-to-chat-id chat-id command'))
                        :update-message-overhead! [chat-id network-status]
                        :save-message             (cond-> (-> command'
@@ -278,24 +278,24 @@
                                                    preview
                                                    (assoc :preview (pr-str preview)))}]
 
-    (cond-> (merge cofx
-                   (chat-model/upsert-chat (assoc cofx :get-stored-chat get-stored-chat :now now)
+    (cond-> (merge fx
+                   (chat-model/upsert-chat (assoc fx :get-stored-chat get-stored-chat :now now)
                                            {:chat-id chat-id})
                    (dissoc result :db))
 
       true
-      (as-> cofx'
-        (merge cofx' (send cofx' params')))
+      (as-> fx'
+        (merge fx' (send fx' params')))
 
       (:to-message command')
       (assoc :chat-requests/mark-as-answered {:chat-id    chat-id
                                               :message-id (:to-message command')})
 
       (= constants/console-chat-id chat-id)
-      (as-> cofx'
+      (as-> fx'
         (let [messages (console-events/console-respond-command-messages params' random-id-seq)
               events   (mapv #(vector :chat-received-message/add %) messages)]
-          (update cofx' :dispatch-n into events))))))
+          (update fx' :dispatch-n into events))))))
 
 (defn invoke-console-command-handler
   [{:keys [db] :as cofx} {:keys [chat-id command] :as command-params}]
@@ -338,14 +338,14 @@
   (let [{:keys [command] :as content} command]
     (-> {:db (chat-model/set-chat-ui-props db {:sending-in-progress? false})}
 
-        (as-> cofx'
+        (as-> fx'
           (cond
             (and (= constants/console-chat-id chat-id)
                  (console-events/commands-names (:name command)))
-            (invoke-console-command-handler (merge cofx cofx') params)
+            (invoke-console-command-handler (merge cofx fx') params)
 
             (:has-handler command)
-            (merge cofx' (invoke-command-handlers (merge cofx cofx') params))
+            (merge fx' (invoke-command-handlers (merge cofx fx') params))
 
             :else
-            (merge cofx' (send-command cofx cofx' chat-id params)))))))
+            (merge fx' (send-command cofx fx' chat-id params)))))))
