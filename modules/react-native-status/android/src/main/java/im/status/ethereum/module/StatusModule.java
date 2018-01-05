@@ -533,15 +533,15 @@ class StatusModule extends ReactContextBaseJavaModule implements LifecycleEventL
             return;
         }
 
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
+        //executor.execute(new Runnable() {
+        //    @Override
+        //    public void run() {
                 Log.d(TAG, "startCallJail");
                 String res = jail.callJail(chatId, path, params);
                 Log.d(TAG, "endCallJail");
                 callback.invoke(res);
-            }
-        });
+        //    }
+        //});
     }
 
     @ReactMethod
