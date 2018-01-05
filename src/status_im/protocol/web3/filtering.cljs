@@ -3,8 +3,28 @@
             [cljs.spec.alpha :as s]
             [taoensso.timbre :as log]))
 
+;; XXX(oskarth): Perf issue to have one topic
+;; See https://github.com/status-im/ideas/issues/55#issuecomment-355511183
 (def status-topic "0xaabb11ee")
+
 (defonce filters (atom {}))
+
+;; NOTE(oskarth): Due to perf we don't want a single topic for all messages,
+;; instead we want many. We need a way for user A and B to agree on which topics
+;; to use. By using first 10 characters of the pub-key, we construct a topic
+;; that requires no coordination for 1-1 chats.
+;;
+;; TODO(oskarth): Ensure it returns 0x123456789 hex
+(defn identity->topic [identity]
+  (apply str (take 10 identity)))
+
+;; TODO(oskarth): Use flag next build
+(defn get-topics [& [identity]]
+  (if true ;; config/many-whisper-topics-enabled?
+    (do (log/info "FLAG: many-whisper-topics-enabled ON")
+        [(identity->topic identity)])
+    (do (log/info "FLAG: many-whisper-topics-enabled OFF")
+        [status-topic])))
 
 (s/def ::options (s/keys :opt-un [:message/to :message/topics]))
 

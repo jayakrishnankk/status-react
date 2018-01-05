@@ -94,11 +94,14 @@
     ;; start listening to user's inbox
     (if config/offline-inbox-enabled?
       (do (log/info "offline inbox: flag enabled")
+          (log/info "QQQ identity:" identity)
+          (log/info "QQQ topic:" (f/get-topics identity))
+          (log/info "QQQ opts:" listener-options)
           (f/add-filter!
             web3
             {:key      identity
              :allowP2P true
-             :topics   [f/status-topic]}
+             :topics  (f/get-topics identity)}
             (l/message-listener listener-options))
           (inbox/request-messages!
            web3
@@ -107,7 +110,7 @@
       (f/add-filter!
         web3
         {:key    identity
-         :topics [f/status-topic]}
+         :topics (f/get-topics identity)}
         (l/message-listener listener-options)))
 
     ;; start listening to profiles
